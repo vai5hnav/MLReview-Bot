@@ -1,0 +1,41 @@
+name: 'MLReviewBot'
+description: 'Reviews scikit-learn ML pipeline code on pull requests for data leakage, unseeded randomness, and other silent ML bugs.'
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  github-token:
+    description: 'GitHub token with pull-requests:write (and optionally checks:write) permission. Usually ${{ secrets.GITHUB_TOKEN }}.'
+    required: true
+  gemini-key:
+    description: 'Google AI Studio Gemini API key, used to enrich findings with explanations and fix suggestions. Optional -- omit to post un-enriched findings.'
+    required: false
+    default: ''
+  score-threshold:
+    description: 'Minimum ML Quality Score (0-100) required for the check run to pass.'
+    required: false
+    default: '70'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install MLReviewBot dependencies
+      shell: bash
+      run: pip install -r "${{ github.action_path }}/requirements.txt"
+
+    - name: Run MLReviewBot
+      shell: bash
+      run: python "${{ github.action_path }}/runner.py"
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GEMINI_API_KEY: ${{ inputs.gemini-key }}
+        SCORE_THRESHOLD: ${{ inputs.score-threshold }}
+        MLREVIEW_REPO: ${{ github.repository }}
+        MLREVIEW_PR: ${{ github.event.pull_request.number }}
+        MLREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
